@@ -1,0 +1,48 @@
+:root {
+  --paper: #f7f2e8;
+  --paper-deep: #efe4d1;
+  --card-bg: rgba(255, 255, 255, 0.6);
+  --ink-primary: #3f2a1b;
+  --ink-muted: #87674f;
+  --ink-soft: #d9c2a8;
+  --button-bg: #a24c2a;
+  --button-text: #fff9f4;
+  --danger: #c95546;
+
+  font-family: 'Avenir Next', 'Trebuchet MS', 'Gill Sans', sans-serif;
+  line-height: 1.4;
+  font-weight: 400;
+  color: var(--ink-primary);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(162, 76, 42, 0.22), transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(135, 103, 79, 0.2), transparent 35%),
+    linear-gradient(160deg, #f9f5ec 0%, #e7d7c0 100%);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: Georgia, 'Times New Roman', serif;
+  color: var(--ink-primary);
+}
