@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -8,14 +8,21 @@ import {
   HumidorApiError,
   updateHumidor,
 } from '../api/humidors'
+import { HumidorCard } from '../components/HumidorCard'
 
 type EditDraft = {
   name: string
   description: string
+  maximum_capacity: string
 }
 
 const messageFromError = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback
+
+const toNullableString = (value: string) => {
+  const trimmed = value.trim()
+  return trimmed ? trimmed : null
+}
 
 export function HumidorsPage() {
   const queryClient = useQueryClient()
@@ -23,8 +30,11 @@ export function HumidorsPage() {
   const editTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [createName, setCreateName] = useState('')
-  const [createDescription, setCreateDescription] = useState('')
+  const [createDraft, setCreateDraft] = useState<EditDraft>({
+    name: '',
+    description: '',
+    maximum_capacity: '25',
+  })
   const [createError, setCreateError] = useState<string | null>(null)
 
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -53,6 +63,7 @@ export function HumidorsPage() {
   const closeCreateModal = () => {
     setIsCreateModalOpen(false)
     setCreateError(null)
+    setCreateDraft({ name: '', description: '', maximum_capacity: '25' })
     createTriggerRef.current?.focus()
   }
 
@@ -60,6 +71,7 @@ export function HumidorsPage() {
     id: string,
     name: string,
     description: string | null | undefined,
+    maximumCapacity: number,
     trigger: HTMLButtonElement,
   ) => {
     editTriggerRef.current = trigger
@@ -71,7 +83,7 @@ export function HumidorsPage() {
     setEditingId(id)
     setEditDrafts((prev) => ({
       ...prev,
-      [id]: { name, description: description ?? '' },
+      [id]: { name, description: description ?? '', maximum_capacity: String(maximumCapacity) },
     }))
   }
 
@@ -90,54 +102,11 @@ export function HumidorsPage() {
     editTriggerRef.current?.focus()
   }
 
-  useEffect(() => {
-    if (!isCreateModalOpen && !editingId) {
-      return
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') {
-        return
-      }
-
-      if (editingId) {
-        setEditingId(null)
-        setEditErrors((prev) => {
-          const next = { ...prev }
-          delete next[editingId]
-          return next
-        })
-        setEditDrafts((prev) => {
-          const next = { ...prev }
-          delete next[editingId]
-          return next
-        })
-        editTriggerRef.current?.focus()
-        return
-      }
-
-      if (isCreateModalOpen) {
-        setIsCreateModalOpen(false)
-        setCreateError(null)
-        createTriggerRef.current?.focus()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [editingId, isCreateModalOpen])
-
   const createMutation = useMutation({
     mutationFn: createHumidor,
     onSuccess: async () => {
-      setCreateName('')
-      setCreateDescription('')
-      setCreateError(null)
-      setIsCreateModalOpen(false)
+      closeCreateModal()
       await queryClient.invalidateQueries({ queryKey: ['humidors'] })
-      createTriggerRef.current?.focus()
     },
     onError: (mutationError) => {
       setCreateError(messageFromError(mutationError, 'Could not create humidor'))
@@ -145,10 +114,11 @@ export function HumidorsPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, name, description }: { id: string; name: string; description: string }) =>
+    mutationFn: ({ id, draft }: { id: string; draft: EditDraft }) =>
       updateHumidor(id, {
-        name,
-        description: description.trim() ? description : null,
+        name: draft.name,
+        description: toNullableString(draft.description),
+        maximum_capacity: Number.parseInt(draft.maximum_capacity, 10) || 0,
       }),
     onSuccess: async (_data, variables) => {
       closeEditModal(variables.id)
@@ -182,15 +152,6 @@ export function HumidorsPage() {
     },
   })
 
-  const submitCreate = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setCreateError(null)
-    createMutation.mutate({
-      name: createName,
-      description: createDescription.trim() ? createDescription : null,
-    })
-  }
-
   const editingHumidor = editingId
     ? sortedHumidors.find((humidor) => humidor.id === editingId) ?? null
     : null
@@ -200,8 +161,19 @@ export function HumidorsPage() {
       ? (editDrafts[editingId] ?? {
           name: editingHumidor.name,
           description: editingHumidor.description ?? '',
+          maximum_capacity: String(editingHumidor.maximum_capacity),
         })
       : null
+
+  const submitCreate = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setCreateError(null)
+    createMutation.mutate({
+      name: createDraft.name,
+      description: toNullableString(createDraft.description),
+      maximum_capacity: Number.parseInt(createDraft.maximum_capacity, 10) || 0,
+    })
+  }
 
   if (isPending) {
     return (
@@ -246,61 +218,48 @@ export function HumidorsPage() {
       ) : (
         <section className="humidor-grid" aria-label="Humidor list">
           {sortedHumidors.map((humidor) => (
-            <article key={humidor.id} className="humidor-card" aria-label={`Humidor ${humidor.name}`}>
-              <h2>{humidor.name}</h2>
-              <p className="humidor-id">ID: {humidor.id}</p>
-              {humidor.description ? (
-                <p className="humidor-description">{humidor.description}</p>
-              ) : (
-                <p className="humidor-description humidor-description-empty">No description provided.</p>
-              )}
+            <div key={humidor.id}>
+              <HumidorCard
+                id={humidor.id}
+                name={humidor.name}
+                description={humidor.description}
+                currentCount={humidor.current_count}
+                maximumCapacity={humidor.maximum_capacity}
+                onEdit={(event) =>
+                  beginEdit(
+                    humidor.id,
+                    humidor.name,
+                    humidor.description,
+                    humidor.maximum_capacity,
+                    event.currentTarget,
+                  )
+                }
+                onDelete={() => {
+                  setDeleteError(null)
+                  setPendingDeleteId(humidor.id)
+                }}
+              />
               {deleteError && pendingDeleteId === humidor.id ? (
                 <p className="inline-error" role="alert">
                   {deleteError}
                 </p>
               ) : null}
-              <div className="card-actions">
-                <button
-                  type="button"
-                  onClick={(event) =>
-                    beginEdit(
-                      humidor.id,
-                      humidor.name,
-                      humidor.description,
-                      event.currentTarget,
-                    )
-                  }
-                >
-                  Edit
-                </button>
-                {pendingDeleteId === humidor.id ? (
-                  <>
-                    <button
-                      type="button"
-                      className="danger"
-                      onClick={() => deleteMutation.mutate(humidor.id)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      {deleteMutation.isPending ? 'Deleting...' : 'Confirm delete'}
-                    </button>
-                    <button type="button" onClick={() => setPendingDeleteId(null)}>
-                      Cancel
-                    </button>
-                  </>
-                ) : (
+              {pendingDeleteId === humidor.id ? (
+                <div className="card-actions">
                   <button
                     type="button"
                     className="danger"
-                    onClick={() => {
-                      setDeleteError(null)
-                      setPendingDeleteId(humidor.id)
-                    }}
+                    onClick={() => deleteMutation.mutate(humidor.id)}
+                    disabled={deleteMutation.isPending}
                   >
-                    Delete
+                    {deleteMutation.isPending ? 'Deleting...' : 'Confirm delete'}
                   </button>
-                )}
-              </div>
-            </article>
+                  <button type="button" onClick={() => setPendingDeleteId(null)}>
+                    Cancel
+                  </button>
+                </div>
+              ) : null}
+            </div>
           ))}
         </section>
       )}
@@ -327,8 +286,8 @@ export function HumidorsPage() {
               <input
                 id="create-name"
                 autoFocus
-                value={createName}
-                onChange={(event) => setCreateName(event.target.value)}
+                value={createDraft.name}
+                onChange={(event) => setCreateDraft((prev) => ({ ...prev, name: event.target.value }))}
                 placeholder="Living Room Humidor"
                 maxLength={120}
                 required
@@ -336,10 +295,23 @@ export function HumidorsPage() {
               <label htmlFor="create-description">Description</label>
               <textarea
                 id="create-description"
-                value={createDescription}
-                onChange={(event) => setCreateDescription(event.target.value)}
+                value={createDraft.description}
+                onChange={(event) =>
+                  setCreateDraft((prev) => ({ ...prev, description: event.target.value }))
+                }
                 placeholder="Temperature and humidity details"
                 rows={3}
+              />
+              <label htmlFor="create-capacity">Maximum capacity</label>
+              <input
+                id="create-capacity"
+                type="number"
+                min={0}
+                value={createDraft.maximum_capacity}
+                onChange={(event) =>
+                  setCreateDraft((prev) => ({ ...prev, maximum_capacity: event.target.value }))
+                }
+                required
               />
               {createError ? (
                 <p className="inline-error" role="alert">
@@ -384,11 +356,7 @@ export function HumidorsPage() {
               className="humidor-form"
               onSubmit={(event) => {
                 event.preventDefault()
-                updateMutation.mutate({
-                  id: editingId,
-                  name: editingDraft.name,
-                  description: editingDraft.description,
-                })
+                updateMutation.mutate({ id: editingId, draft: editingDraft })
               }}
             >
               <label htmlFor="edit-name">Name</label>
@@ -415,6 +383,20 @@ export function HumidorsPage() {
                   }))
                 }
                 rows={3}
+              />
+              <label htmlFor="edit-capacity">Maximum capacity</label>
+              <input
+                id="edit-capacity"
+                type="number"
+                min={0}
+                value={editingDraft.maximum_capacity}
+                onChange={(event) =>
+                  setEditDrafts((prev) => ({
+                    ...prev,
+                    [editingId]: { ...editingDraft, maximum_capacity: event.target.value },
+                  }))
+                }
+                required
               />
               {editErrors[editingId] ? (
                 <p className="inline-error" role="alert">

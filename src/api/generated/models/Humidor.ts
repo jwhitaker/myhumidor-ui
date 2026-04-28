@@ -15,5 +15,13 @@ export type Humidor = {
      * Description of the humidor
      */
     description?: string | null;
+    /**
+     * Maximum number of cigars allowed in the humidor
+     */
+    maximum_capacity: number;
+    /**
+     * Current number of cigars stored in the humidor
+     */
+    current_count: number;
 };
 
