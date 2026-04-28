@@ -1,6 +1,7 @@
 import './App.css'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { HumidorsPage } from './pages/HumidorsPage.tsx'
+import { HumidorDetailPage } from './pages/HumidorDetailPage.tsx'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/humidors" replace />} />
           <Route path="/humidors" element={<HumidorsPage />} />
+          <Route path="/humidors/:id" element={<HumidorDetailPage />} />
         </Routes>
       </main>
     </div>

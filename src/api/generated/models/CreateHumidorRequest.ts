@@ -11,5 +11,9 @@ export type CreateHumidorRequest = {
      * Description of the humidor
      */
     description?: string | null;
+    /**
+     * Maximum number of cigars the humidor can hold
+     */
+    maximum_capacity: number;
 };
 

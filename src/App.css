@@ -45,6 +45,11 @@
   box-shadow: 0 10px 20px rgba(65, 43, 25, 0.12);
 }
 
+.humidor-card-active {
+  border-color: var(--button-bg);
+  box-shadow: 0 0 0 2px rgba(162, 76, 42, 0.24);
+}
+
 .humidor-card h2 {
   margin: 0;
   font-size: 1.15rem;
@@ -126,7 +131,8 @@
 }
 
 .humidor-form input,
-.humidor-form textarea {
+.humidor-form textarea,
+.humidor-form select {
   width: 100%;
   border: 1px solid var(--ink-soft);
   border-radius: 10px;
@@ -220,6 +226,30 @@
   display: flex;
   gap: 0.5rem;
   margin-top: 0.8rem;
+}
+
+.cigar-list {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.cigar-list-item {
+  border: 1px solid var(--ink-soft);
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.cigar-list-item h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.cigar-list-item p {
+  margin: 0.4rem 0 0;
 }
 
 @media (max-width: 640px) {

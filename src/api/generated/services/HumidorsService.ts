@@ -66,6 +66,7 @@ export class HumidorsService {
             errors: {
                 400: `Validation error`,
                 404: `Not found`,
+                409: `Capacity validation error`,
                 500: `Internal server error`,
             },
         });
